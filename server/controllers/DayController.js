@@ -3,7 +3,7 @@ const { Day } = require("../models/schema");
 class DayController {
   static async getDays(req, res) {
     try {
-      const days = await Day.query().orderBy("id", "desc");
+      const days = await Day.query();
       res.json(days);
     } catch (error) {
       res.status(400).send({ error: "API error, opps." });
@@ -26,16 +26,19 @@ class DayController {
           .status(400)
           .send({ error: "You've already submitted for today. 😏" });
       } else {
-        const why = await Day.query()
+        const createdDayObject = await Day.query()
           .allowInsert(
             "[woke_up_at, achievement, slept_at, mood, exercise, demo_link]"
           )
-          .insertGraph(dayData);
-        console.log("-----why", why);
+          .insert(dayData)
+          // insert query will only return whatever fields you have inserted,
+          // call returning("*") will return all the fields
+          .returning("*");
+
         // Return a random inspiration quote as a success message.
         // Just me being super extra. 😎
         const quotes = [
-          "I'm proud of you. -linxea 😭",
+          "I'm proud of you. - linxea 😭",
           "The purpose of life is finding the largest burden that you can bear and bearing it. - Jordan Peterson",
           "Do. Or do not. There is no try. - Yoda 🐲",
           "Work harder. - Casey Neistat 😎",
@@ -43,7 +46,11 @@ class DayController {
           "Do not pray for an easy life, pray for the strength to endure a difficult one. - Bruce Lee 💪"
         ];
         const randomIndex = Math.floor(Math.random() * quotes.length);
-        res.send({ message: quotes[randomIndex] });
+        res.send({
+          message:
+            `Well done! Here's a quote for you: <br/>` + quotes[randomIndex],
+          data: [createdDayObject]
+        });
       }
     } catch (error) {
       console.log("MAYDAY ERROR INCOMING:", error);
